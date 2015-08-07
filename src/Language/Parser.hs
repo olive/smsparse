@@ -43,6 +43,7 @@ extractRaw :: PChunk -> String
 extractRaw (PRaw s) = s
 extractRaw _ = error "extractRaw"
 
+
 extractSMS :: PChunk -> SMSLine
 extractSMS (SMS s) = s
 extractSMS _ = error "extractSMS"
@@ -50,7 +51,8 @@ extractSMS _ = error "extractSMS"
 parse :: [String] -> [ChunkList]
 parse xs =
     let chunks = pChunk <$> xs in
-    parsePChunks RawState chunks []
+    let x = parsePChunks RawState chunks [] in
+    x
 
 
 pChunk :: String -> Chunk
@@ -59,15 +61,15 @@ pChunk s = Raw s
 
 parsePChunks :: PState -> [Chunk] -> [PChunk] -> [ChunkList]
 parsePChunks SMSState (Divider:xs) cur =
-    SMSList (reverse $ extractSMS <$> cur) : parsePChunks RawState xs []
+    SMSList (extractSMS <$> cur) : parsePChunks RawState xs []
 parsePChunks RawState (Divider:xs) cur =
-    PRawList (reverse $ extractRaw <$> cur) : parsePChunks SMSState xs []
+    PRawList (extractRaw <$> cur) : parsePChunks SMSState xs []
 parsePChunks SMSState (Raw s:xs) cur =
     let next = (SMS . parseSMSLine) s in
-    parsePChunks SMSState xs (next:cur)
+    parsePChunks SMSState xs (cur ++ [next])
 parsePChunks RawState (Raw s:xs) cur =
     let next = PRaw s in
-    parsePChunks RawState xs (next:cur)
+    parsePChunks RawState xs (cur ++ [next])
 parsePChunks RawState _ cur = [PRawList (extractRaw <$> cur)]
 parsePChunks SMSState _ cur = [SMSList (extractSMS <$> cur)]
 
